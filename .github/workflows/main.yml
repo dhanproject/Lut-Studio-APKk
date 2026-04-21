@@ -1,0 +1,72 @@
+name: Build APK Android Otomatis Terbaru
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Ambil File ZIP di Gudang
+      uses: actions/checkout@v4
+
+    - name: Ekstrak File ZIP dengan Aman
+      run: |
+        sudo apt-get install -y unzip
+        mkdir -p app_code
+        # Cari file zip apapun namanya, lalu ekstrak paksa
+        find . -name "*.zip" -maxdepth 1 -exec unzip -q -o {} -d app_code \;
+
+    - name: Memulihkan Folder & Install Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+
+    - name: Build Web & Sinkron Capacitor
+      run: |
+        cd app_code
+        
+        # PENTING: Cari folder asli jika ada sub-folder
+        if [ ! -f "package.json" ]; then
+          REAL_DIR=$(find . -name "package.json" -exec dirname {} \;)
+          echo "Folder asli ada di: $REAL_DIR"
+          cd "$REAL_DIR"
+        fi
+        
+        # Install dan siapkan aset
+        npm install --legacy-peer-deps
+        mkdir -p dist
+        cp index.html dist/index.html || true
+        npx cap sync android
+
+    - name: Siapkan Java Tahan Banting
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: RAKIT APK (Bypass Wrapper Rusak!) 🚀
+      run: |
+        GRADLE_PATH=$(find app_code -name "gradlew" -type f | head -n 1)
+        ANDROID_DIR=$(dirname "$GRADLE_PATH")
+        
+        echo "Masuk ke folder android: $ANDROID_DIR"
+        cd "$ANDROID_DIR"
+        
+        # 1. HAPUS file aslinya yang korup/rusak!
+        rm -f gradle/wrapper/gradle-wrapper.jar
+        
+        # 2. Perintahkan sistem Github membuat mesin perakitan yang baru!
+        gradle wrapper
+        
+        # 3. Gas rakit APK pakai mesin baru!
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: Tangkap Hasil APK!
+      uses: actions/upload-artifact@v4
+      with:
+        name: LUT_Studio_Booster_Maksimal
+        path: "**/app/build/outputs/apk/debug/app-debug.apk"
