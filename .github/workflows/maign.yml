@@ -1,0 +1,69 @@
+name: Build APK Android Otomatis Terbaru
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Ambil File ZIP di Gudang
+      uses: actions/checkout@v4
+
+    - name: Ekstrak File ZIP dengan Aman
+      run: |
+        sudo apt-get install -y unzip
+        mkdir -p app_code
+        # Cari file zip apapun namanya, lalu ekstrak paksa
+        find . -name "*.zip" -maxdepth 1 -exec unzip -q -o {} -d app_code \;
+
+    - name: Memulihkan Folder & Install Node.js 24 (ANTI DEPRECATED)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24' # Menggunakan Node 24 sesuai permintaan server 2026
+
+    - name: Build Web & Sinkron Capacitor
+      run: |
+        cd app_code
+        
+        # PENTING: Cari folder asli hasil ekstrak kalau ternyata AI Studio bikin sub-folder
+        if [ ! -f "package.json" ]; then
+          REAL_DIR=$(find . -name "package.json" -exec dirname {} \;)
+          echo "Folder asli ada di: $REAL_DIR"
+          cd "$REAL_DIR"
+        fi
+        
+        # Install dan bikin folder dist
+        npm install --legacy-peer-deps
+        mkdir -p dist
+        cp index.html dist/index.html || true
+        
+        # Paksa sinkron!
+        npx cap sync android
+
+    - name: Siapkan Java Tahan Banting
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: RAKIT APK GRADLE
+      run: |
+        # Cari dulu di mana letak persis file gradlew nya
+        GRADLE_PATH=$(find app_code -name "gradlew" -type f | head -n 1)
+        ANDROID_DIR=$(dirname "$GRADLE_PATH")
+        
+        echo "Masuk ke folder android: $ANDROID_DIR"
+        cd "$ANDROID_DIR"
+        
+        # Buat biar file rakit bisa dieksekusi mesin
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: Tangkap Hasil APK!
+      uses: actions/upload-artifact@v4
+      with:
+        name: LUT_Studio_Booster_Maksimal
+        path: "**/app/build/outputs/apk/debug/app-debug.apk"
