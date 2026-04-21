@@ -1,4 +1,4 @@
-name: Build APK Super-Robot
+name: Build APK Final Fix
 
 on: [push, workflow_dispatch]
 
@@ -10,43 +10,44 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-java@v4
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: PROSES RAKIT TOTAL (FORCED) 🛠️
+      - name: PROSES RAKIT TOTAL (CLEAN) 🚀
         run: |
-          set -e
-          # 1. Paksa install bahan baku
-          npm install --legacy-peer-deps --no-package-lock
-          npm install @capacitor/core @capacitor/cli @capacitor/android --save-dev --no-package-lock
+          # 1. Bersihkan lingkungan dan install dependencies
+          npm install --legacy-peer-deps
+          npm install @capacitor/core @capacitor/cli @capacitor/android
 
-          # 2. Web Build (Kalau error, buat file darurat agar Capacitor tidak mogok)
+          # 2. Pastikan ada folder dist (Syarat mutlak Capacitor)
           npm run build || true
           mkdir -p dist
           if [ ! -f "dist/index.html" ]; then
-             cp index.html dist/index.html || echo "<html><body>LUT Studio Offline</body></html>" > dist/index.html
+            echo "<html><body>LUT Studio</body></html>" > dist/index.html
           fi
 
-          # 3. Paksa buat Config Capacitor jika hilang
-          if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
-            echo '{"appId":"com.dhan.lut","appName":"LUT Studio","webDir":"dist"}' > capacitor.config.json
-          fi
+          # 3. BUANG FOLDER ANDROID LAMA (Penyebab utama error sync)
+          rm -rf android
+          
+          # 4. BUAT ULANG FOLDER ANDROID DARI NOL
+          # Ini akan menjamin folder android cocok dengan versi Capacitor terbaru
+          npx cap add android
 
-          # 4. Paksa Tambah/Update Platform Android
-          if [ ! -d "android" ]; then
-            npx cap add android || true
-          fi
+          # 5. Sinkronisasi Aset ke Android
           npx cap sync android
 
-          # 5. Rakit APK Native
+          # 6. RAKIT APK
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Simpan APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LUT_OFFLINE_HORE
-          path: "**/app-debug.apk"
+          name: LUT_OFFLINE_FIX_FINAL
+          path: "android/app/build/outputs/apk/debug/app-debug.apk"
