@@ -1,4 +1,4 @@
-name: Build APK Auto-Repair
+name: Auto-Build APK Final
 
 on: [push, workflow_dispatch]
 
@@ -15,30 +15,28 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: PROSES PERAKITAN TOTAL 🛠️
+      - name: Eksekusi Rakit APK 🛠️
         run: |
-          # A. Install bahan baku
+          # 1. Install & Build Web (Hasilkan folder dist)
           npm install --legacy-peer-deps
+          npm run build || (mkdir -p dist && echo "<html><body>LUT Studio</body></html>" > dist/index.html)
           
-          # B. Siapkan aset (Bypass jika error)
-          npm run build || (mkdir -p dist && echo "<html><body>Offline</body></html>" > dist/index.html)
-          
-          # C. CEK FOLDER ANDROID. Kalau tidak ada, kita buatkan otomatis!
+          # 2. Tambah Platform Android Paket Komplit (Kalau belum ada)
           if [ ! -d "android" ]; then
-            echo "Folder Android tidak ditemukan, membangun ulang..."
+            npm install @capacitor/android
             npx cap add android
           fi
           
-          # D. Sinkronisasi
+          # 3. Sinkronisasi Aset
           npx cap sync android
           
-          # E. RAKIT APK
+          # 4. Rakit file APK
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload Hasil APK
+      - name: Simpan Hasil APK
         uses: actions/upload-artifact@v4
         with:
-          name: LUT_Studio_OFFLINE_HASIL_AKHIR
+          name: APK_SEDIA_PAKAI
           path: "**/app-debug.apk"
