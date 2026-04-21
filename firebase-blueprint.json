@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "Job": {
+      "title": "Batch Processing Job",
+      "description": "Represents a background image processing job",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user who owns the job" },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed"] },
+        "progress": { "type": "number", "description": "0-100 percentage" },
+        "totalFiles": { "type": "number" },
+        "processedCount": { "type": "number" },
+        "lutId": { "type": "string" },
+        "intensity": { "type": "number" },
+        "error": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "status", "progress", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Information about a batch processing job"
+    }
+  }
+}

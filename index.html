@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LUT Studio - Professional LUT Applicator</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- OFFLINE ENGINE ENABLED - NO FIREBASE REQUIRED -->
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#f8fafc',
+                        card: '#ffffff',
+                        elevated: '#f1f5f9',
+                        border: '#e2e8f0',
+                        muted: '#64748b',
+                        secondary: '#475569'
+                    },
+                    borderRadius: {
+                        'xl': '16px'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+            --p-indigo: #6366f1;
+            --p-indigo-light: #818cf8;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100dvh;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        
+        /* Splash Screen */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .splash-logo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+            animation: pulse-logo 2s infinite ease-in-out;
+        }
+        @keyframes pulse-logo {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); box-shadow: 0 30px 60px rgba(99, 102, 241, 0.5); }
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: var(--safe-top);
+        }
+        .accent-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #4f46e5, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .mobile-card {
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .bottom-sheet {
+            background: #ffffff;
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.05);
+            padding-bottom: calc(var(--safe-bottom) + 20px);
+            border: 1px solid rgba(0,0,0,0.05);
+            max-height: 50dvh;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .handle {
+            width: 40px;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            margin: 12px auto;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 0px;
+        }
+        .drop-zone-active {
+            border-color: #6366f1 !important;
+            background: rgba(99, 102, 241, 0.05) !important;
+        }
+        #compare-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            position: absolute;
+            z-index: 20;
+            cursor: pointer;
+        }
+        #compare-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 3px;
+            height: 100dvh;
+            background: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+        }
+        .split-circle {
+            width: 44px;
+            height: 44px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 2px solid #6366f1;
+            color: #6366f1;
+        }
+        .loading-spinner {
+            border: 3px solid rgba(99, 102, 241, 0.1);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .android-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .android-ripple:active::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #active-jobs-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-logo">
+            <i class="ph-fill ph-cube-transparent text-white text-5xl"></i>
+        </div>
+        <h1 class="mt-8 text-2xl font-black tracking-tight text-slate-900 italic">LUT STUDIO</h1>
+        <p class="mt-2 text-slate-400 text-[10px] font-bold tracking-[0.3em] uppercase">Initializing Lab...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="glass-header h-[72px] px-6 fixed top-0 w-full z-50 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 accent-gradient rounded-[14px] flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <i class="ph-fill ph-cube-transparent text-white text-2xl"></i>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-lg font-extrabold tracking-tight leading-none text-gradient">LUT Studio</span>
+                <span class="text-[9px] font-bold text-slate-400 tracking-widest mt-1">MOBILE LAB v2.1.5</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button id="settings-toggle" class="w-11 h-11 flex items-center justify-center bg-slate-100 text-slate-600 rounded-[14px] active:scale-90 transition-transform">
+                <i class="ph-bold ph-sliders text-xl"></i>
+            </button>
+            <div id="user-profile" class="hidden flex items-center">
+                <div id="user-avatar" class="w-11 h-11 rounded-[14px] border-2 border-indigo-500/50 overflow-hidden ring-4 ring-indigo-500/10"></div>
+            </div>
+            <button id="login-btn" onclick="login()" class="px-5 py-2.5 bg-indigo-600 text-white text-[11px] font-black rounded-xl active:scale-95 transition-all shadow-lg shadow-indigo-500/20">
+                START
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col pt-[72px]">
+        
+        <!-- Preview Section -->
+        <section class="flex-1 bg-slate-100 relative overflow-hidden flex items-center justify-center" id="viewport">
+            <!-- Labels -->
+            <div id="preview-labels" class="absolute top-6 inset-x-6 flex justify-between pointer-events-none z-30 opacity-0 transition-opacity duration-300">
+                 <span class="text-[10px] uppercase font-black text-slate-900 bg-white/80 px-3 py-1.5 rounded-full border border-black/5 backdrop-blur-md">Original</span>
+                 <span id="preview-lut-label" class="text-[10px] uppercase font-black text-white bg-indigo-600 px-3 py-1.5 rounded-full backdrop-blur-md hidden">Grade Active</span>
+            </div>
+
+            <!-- Preview Container -->
+            <div id="preview-container" class="relative transition-transform duration-300 ease-out" style="width: 0px; height: 0px;">
+                <img id="img-original" src="" class="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-0">
+                <div id="result-wrapper" class="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+                     <canvas id="canvas-result" class="w-full h-full object-contain"></canvas>
+                </div>
+
+                <!-- Comparison Slider -->
+                <div id="slider-overlay" class="absolute inset-0 z-20 hidden">
+                    <input type="range" id="compare-slider" min="0" max="100" value="50">
+                    <div id="slider-line" class="absolute top-0 w-[2.5px] bg-indigo-600 h-full pointer-events-none shadow-[0_0_15px_rgba(99,102,241,0.5)]" style="left: 50%;">
+                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 split-circle">
+                            <i class="ph-bold ph-arrows-left-right text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="preview-placeholder" class="text-center px-10">
+                <i class="ph ph-image-square text-slate-300 text-5xl mb-4 block mx-auto"></i>
+                <p class="text-slate-400 text-xs font-bold tracking-[0.2em] uppercase">Tap Add Images below</p>
+            </div>
+
+            <!-- Loading HUD -->
+            <div id="preview-loading" class="hidden absolute inset-0 bg-white/60 z-40 flex items-center justify-center backdrop-blur-md">
+                <div class="flex flex-col items-center gap-5">
+                    <div class="loading-spinner"></div>
+                    <span class="text-[9px] font-black tracking-[0.3em] text-indigo-600 animate-pulse uppercase">Modifying Pixels</span>
+                </div>
+            </div>
+            
+            <!-- Quick View Modes -->
+            <!-- Removed as per request -->
+        </section>
+
+        <!-- Bottom Sheet -->
+        <section class="bottom-sheet shrink-0 animate-slide-up relative">
+            <div class="handle"></div>
+            
+            <div class="px-5 space-y-4">
+                <!-- Intensity HUD (More Compact) -->
+                <div class="mobile-card p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-baseline gap-1">
+                            <span id="intensity-value-display" class="text-3xl font-black text-slate-900 italic leading-none">100</span>
+                            <span class="text-indigo-600 font-bold">%</span>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button class="intensity-label-btn h-8 px-3 rounded-lg text-[10px] font-black bg-slate-100 text-slate-600 border border-black/5 active:scale-95" data-val="50">50</button>
+                            <button class="intensity-label-btn h-8 px-3 rounded-lg text-[10px] font-black bg-slate-800 text-white shadow-md active:scale-95" data-val="100">100</button>
+                            <button class="intensity-label-btn h-8 px-3 rounded-lg text-[10px] font-black accent-gradient text-white shadow-md active:scale-95" data-val="200">BOOST</button>
+                        </div>
+                    </div>
+                    
+                    <div class="relative h-8 flex items-center">
+                        <div class="absolute inset-y-[12px] inset-x-0 bg-slate-100 rounded-full overflow-hidden">
+                            <div id="intensity-fill" class="h-full bg-indigo-600 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.3)]"></div>
+                        </div>
+                        <input type="range" id="intensity-slider" min="0" max="300" value="100" class="absolute inset-0 w-full opacity-0 cursor-pointer z-10 w-full h-8 m-0 p-0">
+                        <div id="intensity-knob" class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-lg border-4 border-indigo-600 transition-transform active:scale-125" style="left: 33%"></div>
+                    </div>
+                </div>
+
+                <!-- Action Hub (Packed) -->
+                <div class="flex gap-2">
+                    <!-- LUT Loader -->
+                    <div id="lut-drop-zone" class="flex-1 mobile-card p-3 flex flex-col items-center justify-center gap-1 border-dashed border-indigo-600/30 bg-indigo-50/50 active:bg-indigo-100 transition-colors cursor-pointer rounded-[20px]">
+                        <input type="file" id="lut-input" class="hidden" accept=".cube">
+                        <i class="ph-fill ph-swatches text-indigo-600 text-[20px]"></i>
+                        <span class="text-[9px] font-black text-indigo-900 tracking-wider">LOAD LUT</span>
+                    </div>
+
+                    <!-- Image Loader -->
+                    <div id="image-drop-zone" class="flex-1 mobile-card p-3 flex flex-col items-center justify-center gap-1 border border-slate-200 bg-white active:bg-slate-50 transition-colors cursor-pointer rounded-[20px] shadow-sm">
+                        <input type="file" id="image-input" class="hidden" accept="image/*" multiple>
+                        <i class="ph-fill ph-image text-slate-800 text-[20px]"></i>
+                        <span class="text-[9px] font-black text-slate-900 tracking-wider">ADD MEDIA</span>
+                    </div>
+
+                    <!-- History Toggle (Icon Only) -->
+                    <div id="history-toggle" class="w-16 shrink-0 mobile-card p-3 flex flex-col items-center justify-center gap-1 border border-slate-200 bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer rounded-[20px] shadow-sm">
+                        <i class="ph-bold ph-clock-counter-clockwise text-slate-600 text-[20px]"></i>
+                        <span class="text-[8px] font-black text-slate-400 tracking-wider">HIST</span>
+                    </div>
+                </div>
+
+                <!-- Active LUT Profile (Smaller) -->
+                <div id="lut-info" class="hidden w-full mobile-card p-2 flex items-center justify-between border border-indigo-100 bg-indigo-50/30 rounded-[16px]">
+                    <div class="flex items-center gap-3 overflow-hidden pl-1">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                            <i class="ph-bold ph-check text-white text-sm"></i>
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span id="lut-title" class="text-[10px] font-black text-slate-900 truncate uppercase tracking-tight">PROFILE</span>
+                            <span class="text-[7px] font-bold text-indigo-600 tracking-[0.2em] uppercase">ACTIVE</span>
+                        </div>
+                    </div>
+                    <button id="clear-lut" class="w-8 h-8 rounded-lg bg-white border border-red-100 text-red-500 flex items-center justify-center active:bg-red-50 transition-colors mr-1">
+                        <i class="ph-bold ph-trash text-[14px]"></i>
+                    </button>
+                </div>
+
+                <!-- Queue -->
+                <div class="space-y-2 pb-2">
+                    <div class="flex justify-between items-center px-1">
+                        <span class="text-[9px] font-black text-slate-400 tracking-[0.2em] uppercase">Film Strip</span>
+                        <span id="queue-count" class="text-[8px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">0</span>
+                    </div>
+                    <div id="file-list" class="flex gap-3 overflow-x-auto custom-scrollbar -mx-5 px-5 py-1">
+                        <div class="w-full text-center py-2 text-slate-300 font-bold text-[9px] border border-black/5 rounded-[12px] bg-white">Waiting for data...</div>
+                    </div>
+                </div>
+
+                <!-- Export History Section -->
+                <div id="history-section" class="space-y-3 pb-8 pt-3 border-t border-slate-100 hidden">
+                    <div class="flex justify-between items-center px-1">
+                        <span class="text-[9px] font-black text-slate-400 tracking-[0.2em] uppercase">Export Library</span>
+                    </div>
+                    <div id="jobs-list" class="space-y-3">
+                        <div class="text-center py-4 text-slate-300 font-bold text-[9px]">No recent exports</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Batch FAB -->
+    <div id="batch-controls" class="hidden fixed bottom-[calc(var(--safe-bottom)+90px)] right-6 z-50">
+        <button id="process-btn" class="w-16 h-16 accent-gradient rounded-full shadow-2xl shadow-indigo-500/50 flex items-center justify-center text-white active:scale-90 transition-all border-4 border-white">
+            <i class="ph-fill ph-rocket-launch text-3xl"></i>
+        </button>
+    </div>
+
+
+    
+    <!-- Settings Drawer -->
+    <div id="settings-drawer" class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="absolute bottom-0 w-full bg-white rounded-t-[40px] transform translate-y-full transition-transform duration-500 p-8 pt-4 border-t border-black/5 shadow-2xl">
+            <div class="handle mb-8"></div>
+            <div class="flex justify-between items-center mb-10">
+                <h3 class="text-2xl font-black text-slate-900 italic">MOBILE LAB</h3>
+                <button id="settings-close" class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center border border-black/5">
+                    <i class="ph-bold ph-x text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-10">
+                <div class="space-y-4">
+                    <label class="text-[9px] font-black text-slate-400 tracking-[0.3em] uppercase">Output Encoding</label>
+                    <select id="setting-format" class="w-full bg-slate-50 border border-black/5 rounded-2xl p-4 text-sm font-black text-slate-900 focus:ring-2 ring-indigo-500 appearance-none">
+                        <option value="original">Preserve (Auto)</option>
+                        <option value="jpeg">JPEG (Compressed)</option>
+                        <option value="png">PNG (Lossless)</option>
+                        <option value="webp">WebP (Next-Gen)</option>
+                    </select>
+                </div>
+                
+                <div class="space-y-4">
+                    <label class="text-[9px] font-black text-slate-400 tracking-[0.3em] uppercase">Export Quality</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button class="setting-btn h-[50px] bg-slate-50 rounded-2xl text-xs font-black text-slate-400 border border-black/5" data-type="quality" data-value="70">70</button>
+                        <button class="setting-btn h-[50px] bg-indigo-600 rounded-2xl text-xs font-black text-white shadow-lg shadow-indigo-600/20" data-type="quality" data-value="85">85</button>
+                        <button class="setting-btn h-[50px] bg-slate-50 rounded-2xl text-xs font-black text-slate-400 border border-black/5" data-type="quality" data-value="95">95</button>
+                        <button class="setting-btn h-[50px] bg-slate-50 rounded-2xl text-xs font-black text-slate-400 border border-black/5" data-type="quality" data-value="100">100</button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <label class="text-[9px] font-black text-slate-400 tracking-[0.3em] uppercase">Post-Processing</label>
+                    <div class="flex items-center justify-between p-4 bg-slate-50 border border-black/5 rounded-2xl">
+                        <span class="text-sm font-black text-slate-900">Auto Sharpening</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-sharpen" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <label class="text-[9px] font-black text-slate-400 tracking-[0.3em] uppercase">File Naming</label>
+                    <div class="flex items-center justify-between p-1 bg-slate-50 border border-black/5 rounded-2xl">
+                        <input type="text" id="setting-prefix" class="w-full bg-transparent p-4 text-sm font-black text-slate-900 focus:outline-none" value="LUT_Export" placeholder="Prefix... (e.g. Edited_)">
+                    </div>
+                </div>
+
+                <p class="text-center text-[9px] font-bold text-slate-400 italic">v2.1 Build Patch • 2026</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Progress Overlay -->
+    <div id="progress-overlay" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-8 backdrop-blur-sm">
+        <div class="max-w-md w-full bg-card border border-border rounded-2xl p-8 flex flex-col items-center">
+            <div class="w-20 h-20 relative mb-6">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5" />
+                    <circle id="overall-progress-circle" cx="50" cy="50" r="45" fill="none" stroke="#667eea" stroke-width="5" stroke-dasharray="283" stroke-dashoffset="283" transform="rotate(-90 50 50)" style="transition: stroke-dashoffset 0.5s ease" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span id="overall-progress-text" class="text-lg font-bold">0%</span>
+                </div>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Processing Batch</h3>
+            <p id="progress-status" class="text-sm text-secondary mb-8 text-center truncate w-full px-4">Preparing assets...</p>
+            
+            <div class="w-full space-y-4 mb-8">
+                <div class="flex justify-between text-[10px] font-bold text-muted uppercase tracking-widest">
+                    <span>Processed</span>
+                    <span id="processed-count">0 / 0</span>
+                </div>
+                <div class="w-full bg-elevated h-1.5 rounded-full overflow-hidden">
+                    <div id="overall-progress-bar" class="h-full accent-gradient transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <button id="cancel-batch" class="px-8 py-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-sm font-bold transition-all border border-red-500/20">
+                CANCEL PROCESS
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 right-8 z-[110] transform translate-y-20 opacity-0 transition-all duration-300 px-6 py-4 rounded-xl border flex items-center gap-3 shadow-2xl">
+        <i id="toast-icon" class="text-xl"></i>
+        <div class="flex flex-col">
+            <p id="toast-title" class="text-sm font-bold"></p>
+            <p id="toast-msg" class="text-xs opacity-70"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- Error Logger ---
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.group('Application Error');
+            console.error('Message:', msg);
+            console.error('URL:', url);
+            console.error('Line:', lineNo, 'Column:', columnNo);
+            console.error('Error object:', error);
+            console.groupEnd();
+            
+            // Show toast if elements is ready
+            if (typeof showToast === 'function') {
+                showToast('System Error', msg, 'error');
+            }
+            return false;
+        };
+
+        // --- Config ---
+        const isAndroidCapacitor = window.origin.includes('capacitor') || (window.location.hostname === 'localhost' && window.location.port === '');
+        const API_BASE_URL = isAndroidCapacitor
+            ? 'https://ais-pre-t4twtxqva65kl3hay7q34c-19661061263.asia-southeast1.run.app' 
+            : '';
+
+        // --- State ---
+        var state = {
+            user: null,
+            jobs: [],
+            lutId: null,
+            lutData: null,
+            files: [],
+            currentPreview: null,
+            intensity: 1.0,
+            zoom: 1.0,
+            viewMode: 'split', // Always split now
+            pan: { x: 0, y: 0 },
+            isPanning: false,
+            settings: {
+                quality: 85,
+                format: 'original',
+                resize: 'original',
+                sharpen: false,
+                prefix: 'LUT_Export'
+            }
+        };
+
+        // --- WebGL LUT Processor ---
+        window.offlineLutEngine = {
+            parseCube: function(text) {
+                const lines = text.split('\n');
+                let title = 'Custom LUT';
+                let size = 0;
+                const data = [];
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line.startsWith('#') || line === '') continue;
+                    if (line.startsWith('TITLE')) title = line.split('"')[1] || title;
+                    else if (line.startsWith('LUT_3D_SIZE')) size = parseInt(line.split(' ')[1]);
+                    else if (line.match(/^[-+]?[0-9]*\.?[0-9]+\s+[-+]?[0-9]*\.?[0-9]+\s+[-+]?[0-9]*\.?[0-9]+/)) {
+                        const parts = line.split(/\s+/).map(Number);
+                        data.push(...parts);
+                    }
+                }
+                return { title, size, data: new Float32Array(data) };
+            },
+            applyLutWebGL: function(img, lut, intensity, canvas) {
+                return new Promise((resolve) => {
+                    const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+                    if (!gl) { alert('WebGL2 not supported'); return resolve(false); }
+                    
+                    canvas.width = img.naturalWidth || img.width;
+                    canvas.height = img.naturalHeight || img.height;
+                    
+                    const vsSource = `#version 300 es\nlayout(location=0) in vec2 position; layout(location=1) in vec2 texcoord; out vec2 v_texcoord; void main(){ gl_Position = vec4(position, 0.0, 1.0); v_texcoord = texcoord; }`;
+                    const fsSource = `#version 300 es\nprecision highp float; uniform highp sampler2D u_image; uniform highp sampler3D u_lut; uniform float u_intensity; uniform float u_lut_size; in vec2 v_texcoord; out vec4 outColor; void main(){ vec4 tColor = texture(u_image, v_texcoord); float half_px = 0.5/u_lut_size; float max_val = (u_lut_size-1.0)/u_lut_size; vec3 lut_coord = half_px + tColor.rgb * max_val; vec4 lColor = vec4(texture(u_lut, vec3(lut_coord.r, lut_coord.g, lut_coord.b)).rgb, tColor.a); outColor = mix(tColor, lColor, u_intensity); }`;
+                    
+                    const compileShader = (type, source) => {
+                        const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s);
+                        return s;
+                    };
+                    const prog = gl.createProgram();
+                    gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSource));
+                    gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSource));
+                    gl.linkProgram(prog); gl.useProgram(prog);
+                    
+                    const posBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+                    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+                    
+                    const tcBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, tcBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,1, 1,1, 0,0, 1,1, 1,0, 0,0]), gl.STATIC_DRAW);
+                    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+                    
+                    gl.activeTexture(gl.TEXTURE0);
+                    const imgTex = gl.createTexture();
+                    gl.bindTexture(gl.TEXTURE_2D, imgTex);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    
+                    gl.activeTexture(gl.TEXTURE1);
+                    const lutTex = gl.createTexture();
+                    gl.bindTexture(gl.TEXTURE_3D, lutTex);
+                    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGB16F, lut.size, lut.size, lut.size, 0, gl.RGB, gl.FLOAT, lut.data);
+                    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                    
+                    gl.uniform1i(gl.getUniformLocation(prog, "u_image"), 0);
+                    gl.uniform1i(gl.getUniformLocation(prog, "u_lut"), 1);
+                    gl.uniform1f(gl.getUniformLocation(prog, "u_intensity"), intensity);
+                    gl.uniform1f(gl.getUniformLocation(prog, "u_lut_size"), lut.size);
+                    
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                    resolve(true); // Drawn directly to canvas
+                });
+            }
+        };
+
+        function updateAuthUI() { /* Removed Cloud login */ }
+        async function login() { showToast('Offline Mode', 'No login required', 'success'); }
+        async function logout() { }
+        function startJobsListener() { }
+        function renderJobs() { }
+
+        window.downloadImage = async function(url, filename) {
+            try {
+                showToast('Downloading', 'Preparing image for download...', 'info');
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Failed to fetch image');
+                const blob = await res.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(blobUrl);
+                    a.remove();
+                }, 100);
+            } catch (err) {
+                console.error("Download failed", err);
+                showToast("Download Error", "Could not download image", "error");
+            }
+        };
+
+        function renderJobs() {
+            const list = document.getElementById('jobs-list');
+            if (!list) return;
+
+            if (state.jobs.length > 0) {
+                list.innerHTML = state.jobs.map(job => {
+                    let actionsHtml = '';
+                    if (job.status === 'completed' && job.files) {
+                        actionsHtml = `
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                ${job.files.map((url, idx) => {
+                                    const fileName = url.split('/').pop() || `image_${idx + 1}.jpg`;
+                                    return `
+                                        <button onclick="downloadImage('${API_BASE_URL}${url}', '${fileName}')" class="px-3 py-1.5 bg-indigo-600 text-[9px] font-black text-white rounded-lg active:scale-95 transition-transform flex items-center gap-1 cursor-pointer">
+                                            <i class="ph-bold ph-download-simple"></i> IMG ${idx + 1}
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="p-4 bg-white rounded-2xl border border-black/5 space-y-3 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] font-black text-slate-400 tracking-wider">JOB ID #${job.id.substr(0,8)}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full ${job.status === 'completed' ? 'bg-green-500' : 'bg-indigo-500 animate-pulse'}"></span>
+                                        <span class="text-[10px] font-bold text-slate-900 uppercase">${job.status}</span>
+                                    </div>
+                                </div>
+                                <span class="text-[11px] font-black text-indigo-600">${job.progress}%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-indigo-500 transition-all duration-700" style="width: ${job.progress}%"></div>
+                            </div>
+                            ${actionsHtml}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                list.innerHTML = `<div class="text-center py-8 text-slate-300 font-bold text-[10px]">No recent exports</div>`;
+            }
+        }
+
+        // --- Elements ---
+        var elements = {};
+
+        function initElements() {
+            try {
+                elements = {
+                    lutInput: document.getElementById('lut-input'),
+                    lutDropZone: document.getElementById('lut-drop-zone'),
+                    lutInfo: document.getElementById('lut-info'),
+                    imageInput: document.getElementById('image-input'),
+                    imageDropZone: document.getElementById('image-drop-zone'),
+                    fileList: document.getElementById('file-list'),
+                    queueCount: document.getElementById('queue-count'),
+                    processBtn: document.getElementById('process-btn'),
+                    batchControls: document.getElementById('batch-controls'),
+                    viewport: document.getElementById('viewport'),
+                    previewContainer: document.getElementById('preview-container'),
+                    imgOriginal: document.getElementById('img-original'),
+                    canvasResult: document.getElementById('canvas-result'),
+                    previewPlaceholder: document.getElementById('preview-placeholder'),
+                    previewLoading: document.getElementById('preview-loading'),
+                    previewFilename: document.getElementById('preview-filename'),
+                    intensitySlider: document.getElementById('intensity-slider'),
+                    intensityValueDisplay: document.getElementById('intensity-value-display'),
+                    intensityFill: document.getElementById('intensity-fill'),
+                    intensityKnob: document.getElementById('intensity-knob'),
+                    zoomLevel: document.getElementById('zoom-level'),
+                    compareSlider: document.getElementById('compare-slider'),
+                    sliderOverlay: document.getElementById('slider-overlay'),
+                    sliderLine: document.getElementById('slider-line'),
+                    settingsToggle: document.getElementById('settings-toggle'),
+                    settingsDrawer: document.getElementById('settings-drawer'),
+                    settingsClose: document.getElementById('settings-close'),
+                    progressOverlay: document.getElementById('progress-overlay'),
+                    toast: document.getElementById('toast'),
+                    previewLutLabel: document.getElementById('preview-lut-label'),
+                    activeJobsPanel: document.getElementById('active-jobs-panel')
+                };
+            } catch (e) {
+                console.error('Error initializing elements:', e);
+            }
+        }
+
+        // --- Handlers ---
+        async function handleLutUpload(file) {
+            if (!file) return;
+            if (!file.name.endsWith('.cube')) {
+                showToast('Invalid File', 'Please upload a .cube file', 'error');
+                return;
+            }
+
+            try {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const rawText = e.target.result;
+                    const parsed = window.offlineLutEngine.parseCube(rawText);
+                    if (parsed.size === 0) throw new Error("Invalid LUT format");
+                    
+                    state.lutData = parsed;
+                    state.lutId = file.name;
+                    
+                    const titleEl = document.getElementById('lut-title');
+                    if (titleEl) titleEl.textContent = parsed.title || file.name;
+                    
+                    if (elements.lutInfo) elements.lutInfo.classList.remove('hidden');
+                    if (elements.lutDropZone) elements.lutDropZone.classList.add('hidden');
+                    
+                    showToast('LUT Engine Online', `${parsed.title || file.name} parsed in memory`, 'success');
+                    refreshPreview();
+                };
+                reader.readAsText(file);
+            } catch (err) {
+                showToast('Parse Error', err.message, 'error');
+            }
+        }
+
+        function handleImageUpload(files) {
+            if (!files) return;
+            const added = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (added.length === 0) return;
+
+            added.forEach(file => {
+                const id = Math.random().toString(36).substr(2, 9);
+                state.files.push({ id, file, url: URL.createObjectURL(file) });
+                addToFileList(id, file);
+            });
+
+            if (!state.currentPreview && state.files.length > 0) {
+                setPreview(state.files[0].id);
+            }
+
+            updateQueueUI();
+            showToast('Images Added', `${added.length} files added to queue`, 'success');
+        }
+
+        function addToFileList(id, file) {
+            if (!elements.fileList) return;
+            const item = document.createElement('div');
+            item.className = 'shrink-0 w-[110px] mobile-card p-2 relative active:scale-95 transition-transform overflow-hidden';
+            item.dataset.id = id;
+            item.onclick = (e) => {
+                if (e.target.closest('.remove-file')) return;
+                setPreview(id);
+            };
+
+            item.innerHTML = `
+                <div class="aspect-square rounded-xl overflow-hidden bg-slate-800">
+                     <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover" referrerPolicy="no-referrer">
+                </div>
+                <div class="mt-2 text-center">
+                    <p class="text-[8px] font-black text-slate-400 truncate">${file.name}</p>
+                </div>
+                <button class="remove-file absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i class="ph-bold ph-x text-[10px]"></i>
+                </button>
+            `;
+
+            if (elements.fileList.innerText.includes('No files in orbit')) {
+                elements.fileList.innerHTML = '';
+            }
+            elements.fileList.appendChild(item);
+        }
+
+        function setPreview(id) {
+            const fileObj = state.files.find(f => f.id === id);
+            if (!fileObj) return;
+
+            state.currentPreview = fileObj;
+            if (elements.previewFilename) elements.previewFilename.textContent = fileObj.file.name;
+            if (elements.imgOriginal) {
+                elements.imgOriginal.src = fileObj.url;
+                elements.imgOriginal.onload = () => {
+                    if (elements.previewPlaceholder) elements.previewPlaceholder.classList.add('hidden');
+                    elements.imgOriginal.classList.remove('opacity-0');
+                    refreshPreview();
+                    fitToScreen();
+                };
+            }
+
+            document.querySelectorAll('#file-list > div').forEach(el => {
+                el.classList.remove('border-purple-500', 'bg-purple-50');
+                if (el.dataset.id === id) el.classList.add('border-purple-500', 'bg-purple-50');
+            });
+        }
+
+        // Export to window for event listeners
+        window.handleLutUpload = handleLutUpload;
+        window.handleImageUpload = handleImageUpload;
+        window.addToFileList = addToFileList;
+        window.setPreview = setPreview;
+
+        // --- Init ---
+        function init() {
+            console.log('LUT Studio Initializing...');
+            initElements();
+            setupEventListeners();
+            updateIntensityUI();
+            console.log('LUT Studio Ready.');
+        }
+
+        function setupEventListeners() {
+            // LUT Upload
+            if (elements.lutDropZone && elements.lutInput) {
+                elements.lutDropZone.onclick = () => elements.lutInput.click();
+                elements.lutInput.onchange = e => handleLutUpload(e.target.files[0]);
+                setupDropZone(elements.lutDropZone, function(files) { handleLutUpload(files[0]); });
+            }
+
+            // Image Upload
+            if (elements.imageDropZone && elements.imageInput) {
+                elements.imageDropZone.onclick = () => elements.imageInput.click();
+                elements.imageInput.onchange = e => handleImageUpload(e.target.files);
+                setupDropZone(elements.imageDropZone, handleImageUpload);
+            }
+
+            // Intensity
+            if (elements.intensitySlider) {
+                elements.intensitySlider.oninput = e => {
+                    state.intensity = parseInt(e.target.value) / 100;
+                    updateIntensityUI();
+                    debouncePreview();
+                };
+            }
+
+            document.querySelectorAll('.intensity-label-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const val = btn.dataset.val;
+                    if (elements.intensitySlider) elements.intensitySlider.value = val;
+                    state.intensity = val / 100;
+                    updateIntensityUI();
+                    refreshPreview();
+                };
+            });
+
+            // Zoom & Pan
+            if (elements.viewport) elements.viewport.onwheel = handleZoom;
+            if (elements.previewContainer) elements.previewContainer.onmousedown = startPan;
+            window.onmousemove = doPan;
+            window.onmouseup = stopPan;
+            document.querySelectorAll('.zoom-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const direction = btn.dataset.zoom === 'in' ? 1.1 : 0.9;
+                    updateZoom(state.zoom * direction);
+                };
+            });
+            
+            const fitBtn = document.getElementById('fit-toggle');
+            if (fitBtn) fitBtn.onclick = fitToScreen;
+
+            // View Modes - Removed
+
+            // Compare Slider
+            if (elements.compareSlider) {
+                elements.compareSlider.oninput = e => {
+                    const val = e.target.value;
+                    if (elements.sliderLine) elements.sliderLine.style.left = `${val}%`;
+                    const resWrapper = document.getElementById('result-wrapper');
+                    if (resWrapper) resWrapper.style.clipPath = `inset(0 0 0 ${val}%)`;
+                };
+            }
+
+            // Settings
+            if (elements.settingsToggle) {
+                elements.settingsToggle.onclick = () => {
+                    if(elements.settingsDrawer) {
+                        elements.settingsDrawer.classList.remove('pointer-events-none', 'opacity-0');
+                        const sheet = elements.settingsDrawer.querySelector('div');
+                        if (sheet) sheet.classList.remove('translate-y-full');
+                    }
+                }
+            }
+            if (elements.settingsClose) {
+                elements.settingsClose.onclick = () => {
+                    if(elements.settingsDrawer) {
+                        elements.settingsDrawer.classList.add('pointer-events-none', 'opacity-0');
+                        const sheet = elements.settingsDrawer.querySelector('div');
+                        if (sheet) sheet.classList.add('translate-y-full');
+                    }
+                }
+            }
+            document.querySelectorAll('select').forEach(sel => {
+                sel.onchange = (e) => {
+                    const id = e.target.id;
+                    const val = e.target.value;
+                    if (id === 'main-setting-format' || id === 'setting-format') state.settings.format = val;
+                    if (id === 'main-setting-resize' || id === 'setting-resize') state.settings.resize = val;
+                };
+            });
+
+            // Settings - Additions
+            const settingSharpen = document.getElementById('setting-sharpen');
+            if (settingSharpen) {
+                settingSharpen.onchange = e => {
+                    state.settings.sharpen = e.target.checked;
+                };
+            }
+            const settingPrefix = document.getElementById('setting-prefix');
+            if (settingPrefix) {
+                settingPrefix.onchange = e => {
+                    state.settings.prefix = e.target.value || 'LUT_Export';
+                };
+            }
+
+            // Quality buttons
+            document.querySelectorAll('.setting-btn[data-type="quality"]').forEach(btn => {
+                btn.onclick = () => {
+                   document.querySelectorAll('.setting-btn[data-type="quality"]').forEach(b => {
+                       b.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-600/20');
+                       b.classList.add('bg-slate-50', 'text-slate-400');
+                   });
+                   btn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-600/20');
+                   btn.classList.remove('bg-slate-50', 'text-slate-400');
+                   state.settings.quality = parseInt(btn.dataset.value);
+                }
+            });
+
+            // Batch
+            if (elements.processBtn) elements.processBtn.onclick = startBatchProcessing;
+            const cancelBatch = document.getElementById('cancel-batch');
+            if (cancelBatch) cancelBatch.onclick = () => window.location.reload();
+
+            // LUT Clearing
+            const clearLut = document.getElementById('clear-lut');
+            if (clearLut) {
+                clearLut.onclick = () => {
+                    state.lutId = null;
+                    if (elements.lutInfo) elements.lutInfo.classList.add('hidden');
+                    const lutTitle = document.getElementById('lut-title');
+                    if (lutTitle) lutTitle.textContent = '';
+                    showToast('LUT Removed', 'Preview reverted to original', 'info');
+                    refreshPreview();
+                };
+            }
+
+            // History Scroll
+            const historyToggle = document.getElementById('history-toggle');
+            if (historyToggle) {
+                historyToggle.onclick = () => {
+                    const section = document.getElementById('history-section');
+                    if (section) {
+                        section.classList.toggle('hidden');
+                        if (!section.classList.contains('hidden')) {
+                            section.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        }
+                    }
+                };
+            }
+        }
+
+        window.debouncePreview = debounce(() => refreshPreview(), 200);
+
+        window.updateIntensityUI = function() {
+            const v = Math.round(state.intensity * 100);
+            const displayValue = elements.intensityValueDisplay;
+            
+            if (displayValue) {
+                displayValue.textContent = v;
+                if (v > 100) {
+                    displayValue.classList.add('text-pink-600');
+                    displayValue.classList.remove('text-slate-900');
+                } else {
+                    displayValue.classList.remove('text-pink-600');
+                    displayValue.classList.add('text-slate-900');
+                }
+            }
+
+            // Slider mapping (slider max is 300)
+            const sliderPercentage = (v / 300) * 100;
+            if (elements.intensityFill) elements.intensityFill.style.width = `${sliderPercentage}%`;
+            if (elements.intensityKnob) elements.intensityKnob.style.left = `${sliderPercentage}%`;
+            
+            // Toggle active classes for labels
+            document.querySelectorAll('.intensity-label-btn').forEach(btn => {
+                const val = parseInt(btn.dataset.val);
+                const isSelected = (v <= 60 && val == 50) || (v > 60 && v <= 150 && val == 100) || (v > 150 && val == 200);
+                if (isSelected) {
+                    btn.classList.add('accent-gradient', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+                    btn.classList.remove('bg-slate-100', 'text-slate-600', 'bg-slate-800');
+                } else {
+                    btn.classList.remove('accent-gradient', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+                    btn.classList.add('bg-slate-100', 'text-slate-600');
+                }
+            });
+        };
+
+        async function refreshPreview() {
+            if (!state.currentPreview) return;
+
+            if (!state.lutData) {
+                drawToCanvas(state.imgOriginal);
+                if (elements.previewLutLabel) elements.previewLutLabel.classList.add('hidden');
+                return;
+            }
+
+            if (elements.previewLutLabel) elements.previewLutLabel.classList.remove('hidden');
+            
+            try {
+                // Ensure the original image is fully loaded before drawing
+                if (!elements.imgOriginal.complete) {
+                    await new Promise(res => { elements.imgOriginal.onload = res; });
+                }
+                
+                await window.offlineLutEngine.applyLutWebGL(elements.imgOriginal, state.lutData, state.intensity, elements.canvasResult);
+                
+                // Keep image ratio aspect visually
+                const ratio = elements.canvasResult.width / elements.canvasResult.height;
+                if (elements.viewport && elements.previewContainer) {
+                    const viewportWidth = elements.viewport.clientWidth;
+                    const viewportHeight = elements.viewport.clientHeight;
+                    let w = viewportWidth * 0.8;
+                    let h = w / ratio;
+                    if (h > viewportHeight * 0.8) {
+                        h = viewportHeight * 0.8;
+                        w = h * ratio;
+                    }
+                    elements.previewContainer.style.width = `${w}px`;
+                    elements.previewContainer.style.height = `${h}px`;
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Renderer Error', err.message, 'error');
+            }
+        }
+
+        function drawToCanvas(img) {
+            if (!img || !elements.canvasResult) return;
+            const ctx = elements.canvasResult.getContext('2d');
+            elements.canvasResult.width = img.naturalWidth || img.width;
+            elements.canvasResult.height = img.naturalHeight || img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            // Re-sync container size with image ratio
+            const ratio = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+            if (elements.viewport && elements.previewContainer) {
+                const viewportWidth = elements.viewport.clientWidth;
+                const viewportHeight = elements.viewport.clientHeight;
+                
+                let w = viewportWidth * 0.8;
+                let h = w / ratio;
+                if (h > viewportHeight * 0.8) {
+                    h = viewportHeight * 0.8;
+                    w = h * ratio;
+                }
+                
+                elements.previewContainer.style.width = `${w}px`;
+                elements.previewContainer.style.height = `${h}px`;
+            }
+        }
+
+        async function startBatchProcessing() {
+            if (!state.lutData) {
+                showToast('Missing LUT', 'Upload a LUT before processing', 'error');
+                return;
+            }
+
+            if (elements.progressOverlay) elements.progressOverlay.classList.remove('hidden');
+            const status = document.getElementById('progress-status');
+            const countDisplay = document.getElementById('processed-count');
+            const bar = document.getElementById('overall-progress-bar');
+            
+            if (status) status.textContent = 'Preparing fast local engine...';
+            
+            let completed = 0;
+            const total = state.files.length;
+            
+            const processedImages = [];
+            
+            // Hidden temp canvas for batch rendering
+            const tempCanvas = document.createElement('canvas');
+            
+            for (let i = 0; i < total; i++) {
+                const f = state.files[i];
+                if (status) status.textContent = `Applying Color: ${f.file.name}`;
+                if (countDisplay) countDisplay.textContent = `${completed} / ${total}`;
+                
+                // Load Img
+                const img = new Image();
+                img.src = f.url;
+                await new Promise(res => { img.onload = res; });
+                
+                // Apply LUT
+                await window.offlineLutEngine.applyLutWebGL(img, state.lutData, state.intensity, tempCanvas);
+                
+                // Convert to output format
+                const mimeType = state.settings.format === 'jpeg' ? 'image/jpeg' : (state.settings.format === 'webp' ? 'image/webp' : 'image/png');
+                const quality = state.settings.quality / 100;
+                
+                const dataUrl = tempCanvas.toDataURL(mimeType, quality);
+                const ext = mimeType.split('/')[1];
+                const originalName = f.file.name.substring(0, f.file.name.lastIndexOf('.'));
+                const newName = `${state.settings.prefix || 'LUT'}_${originalName}.${ext}`;
+                
+                processedImages.push({ url: dataUrl, name: newName });
+                
+                completed++;
+                if (bar) bar.style.width = `${(completed / total) * 100}%`;
+            }
+            
+            if (status) status.textContent = 'Exporting files...';
+            
+            // Build Download UI
+            const id = Math.random().toString(36).substr(2, 9);
+            const list = document.getElementById('jobs-list');
+            
+            let actionsHtml = `<div class="flex flex-wrap gap-2 mt-2">`;
+            processedImages.forEach((img, idx) => {
+                actionsHtml += `<button onclick="downloadImage('${img.url}', '${img.name}')" class="px-3 py-1.5 bg-indigo-600 text-[9px] font-black text-white rounded-lg active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"><i class="ph-bold ph-download-simple"></i> ${img.name}</button>`;
+            });
+            actionsHtml += `</div>`;
+            
+            const itemHTML = `
+                <div class="p-4 bg-white rounded-2xl border border-black/5 space-y-3 shadow-sm">
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black text-slate-400 tracking-wider">BATCH #${id}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                <span class="text-[10px] font-bold text-slate-900 uppercase">LOCAL SUCCESS</span>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-black text-indigo-600">100%</span>
+                    </div>
+                    ${actionsHtml}
+                </div>`;
+                
+            if (list) {
+                if(list.innerText.includes('No recent')) list.innerHTML = '';
+                list.innerHTML = itemHTML + list.innerHTML;
+            }
+
+            finishBatch(id);
+        }
+
+        function finishBatch(jobId) {
+            const status = document.getElementById('progress-status');
+            if (status) status.textContent = 'Batch Process Complete!';
+            showToast('Fast Export Ready', 'All files processed securely on your device', 'success');
+            setTimeout(() => {
+                if (elements.progressOverlay) elements.progressOverlay.classList.add('hidden');
+                
+                const section = document.getElementById('history-section');
+                if (section) {
+                    section.classList.remove('hidden');
+                    section.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 1000);
+        }
+
+        function setupDropZone(zone, handler) {
+            if (!zone) return;
+            zone.ondragover = e => { e.preventDefault(); zone.classList.add('drop-zone-active'); };
+            zone.ondragleave = () => zone.classList.remove('drop-zone-active');
+            zone.ondrop = e => { 
+                e.preventDefault(); 
+                zone.classList.remove('drop-zone-active'); 
+                if (e.dataTransfer && e.dataTransfer.files) {
+                    handler(e.dataTransfer.files); 
+                }
+            };
+        }
+
+        function updateQueueUI() {
+            if (elements.queueCount) elements.queueCount.textContent = `${state.files.length} files`;
+            if (elements.batchControls) {
+                if (state.files.length > 0) {
+                    elements.batchControls.classList.remove('hidden');
+                } else {
+                    elements.batchControls.classList.add('hidden');
+                }
+            }
+        }
+
+        function removeFile(id) {
+            state.files = state.files.filter(f => f.id !== id);
+            if (elements.fileList) {
+                const el = elements.fileList.querySelector(`[data-id="${id}"]`);
+                if (el) el.remove();
+                
+                if (state.files.length === 0) {
+                    elements.fileList.innerHTML = `<div class="text-center py-12 text-muted"><i class="ph ph-ghost text-4xl mb-2 opacity-20"></i><p class="text-xs">Queue is empty</p></div>`;
+                    state.currentPreview = null;
+                    if (elements.previewPlaceholder) elements.previewPlaceholder.classList.remove('hidden');
+                    if (elements.imgOriginal) {
+                        elements.imgOriginal.src = '';
+                        elements.imgOriginal.classList.add('opacity-0');
+                    }
+                    if (elements.previewFilename) elements.previewFilename.textContent = 'No image selected';
+                }
+            }
+            updateQueueUI();
+        }
+
+        function updateZoom(newZoom) {
+            state.zoom = Math.min(Math.max(newZoom, 0.1), 5);
+            if (elements.zoomLevel) elements.zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+            if (elements.previewContainer) {
+                elements.previewContainer.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
+            }
+        }
+
+        function handleZoom(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            updateZoom(state.zoom * delta);
+        }
+
+        function fitToScreen() {
+            if (!elements.viewport || !state.currentPreview) return;
+            state.pan = { x: 0, y: 0 };
+            state.zoom = 1.0;
+            
+            const viewportWidth = elements.viewport.clientWidth;
+            const viewportHeight = elements.viewport.clientHeight;
+            const img = elements.imgOriginal;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            
+            let w = viewportWidth * 0.95;
+            let h = w / ratio;
+            
+            if (h > viewportHeight * 0.95) {
+                h = viewportHeight * 0.95;
+                w = h * ratio;
+            }
+            
+            if (elements.previewContainer) {
+                elements.previewContainer.style.width = `${w}px`;
+                elements.previewContainer.style.height = `${h}px`;
+                elements.previewContainer.style.transform = `translate(0px, 0px) scale(1)`;
+            }
+        }
+
+        function startPan(e) {
+            if (e.button !== 0) return;
+            state.isPanning = true;
+            state.startPan = { x: e.clientX - state.pan.x, y: e.clientY - state.pan.y };
+        }
+
+        function doPan(e) {
+            if (!state.isPanning) return;
+            state.pan.x = e.clientX - state.startPan.x;
+            state.pan.y = e.clientY - state.startPan.y;
+            if (elements.previewContainer) {
+                elements.previewContainer.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
+            }
+        }
+
+        function stopPan() { state.isPanning = false; }
+
+        function updateViewMode() {
+            const resWrapper = document.getElementById('result-wrapper');
+            const labelsLine = document.getElementById('preview-labels');
+            const slider = elements.compareSlider;
+            const sliderLine = elements.sliderLine;
+            
+            if (!state.currentPreview) {
+                if (elements.sliderOverlay) elements.sliderOverlay.classList.add('hidden');
+                if (elements.imgOriginal) elements.imgOriginal.classList.add('opacity-0', 'hidden');
+                if (labelsLine) labelsLine.classList.add('opacity-0', 'hidden');
+                return;
+            }
+
+            // ALWAYS DIFF MODE
+            if (elements.sliderOverlay) elements.sliderOverlay.classList.remove('hidden');
+            if (elements.imgOriginal) {
+                elements.imgOriginal.classList.remove('opacity-0', 'hidden');
+                elements.imgOriginal.style.pointerEvents = 'none';
+                elements.imgOriginal.style.zIndex = '5';
+            }
+            if (resWrapper) {
+                resWrapper.style.zIndex = '10';
+                const val = slider ? slider.value : 50;
+                resWrapper.style.clipPath = `inset(0 0 0 ${val}%)`;
+                if (sliderLine) sliderLine.style.left = `${val}%`;
+            }
+            if (labelsLine) {
+                labelsLine.classList.remove('opacity-0', 'hidden');
+                labelsLine.style.zIndex = '30';
+            }
+        }
+
+        function showToast(title, msg, type = 'success') {
+            if (!elements.toast) return;
+            const colors = {
+                success: { border: 'border-green-500/20', bg: 'bg-green-500/10', text: 'text-green-400', icon: 'ph-check-circle' },
+                error: { border: 'border-red-500/20', bg: 'bg-red-500/10', text: 'text-red-400', icon: 'ph-warning-octagon' },
+                info: { border: 'border-blue-500/20', bg: 'bg-blue-500/10', text: 'text-blue-400', icon: 'ph-info' }
+            };
+            const config = colors[type] || colors.success;
+            elements.toast.className = `fixed bottom-8 right-8 z-[110] transform translate-y-0 opacity-100 transition-all duration-300 px-6 py-4 rounded-xl border flex items-center gap-3 shadow-2xl ${config.bg} ${config.border} ${config.text}`;
+            
+            const tTitle = document.getElementById('toast-title');
+            const tMsg = document.getElementById('toast-msg');
+            const tIcon = document.getElementById('toast-icon');
+            
+            if (tTitle) tTitle.textContent = title;
+            if (tMsg) tMsg.textContent = msg;
+            if (tIcon) tIcon.className = `ph ${config.icon} text-xl`;
+
+            setTimeout(() => {
+                if (elements.toast) {
+                    elements.toast.classList.add('translate-y-20', 'opacity-0');
+                    elements.toast.classList.remove('translate-y-0', 'opacity-100');
+                }
+            }, 3000);
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // --- Export to global window context ---
+        window.refreshPreview = refreshPreview;
+        window.drawToCanvas = drawToCanvas;
+        window.startBatchProcessing = startBatchProcessing;
+        window.finishBatch = finishBatch;
+        window.setupDropZone = setupDropZone;
+        window.updateQueueUI = updateQueueUI;
+        window.removeFile = removeFile;
+        window.updateZoom = updateZoom;
+        window.handleZoom = handleZoom;
+        window.fitToScreen = fitToScreen;
+        window.startPan = startPan;
+        window.doPan = doPan;
+        window.stopPan = stopPan;
+        window.updateViewMode = updateViewMode;
+        window.showToast = showToast;
+        window.debounce = debounce;
+
+        // --- App Entry ---
+        async function requestPermissions() {
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                console.log('Mobile detected: Check permissions...');
+                // We typically use the native file picker which doesn't always need blunt "all files" access
+                // but checking for library intent is good.
+                try {
+                   // This is a placeholder since different plugins handle permissions differently
+                   // but it ensures the app logic flows through a check.
+                } catch (e) {
+                   console.warn("Permission check failed, proceeding with system defaults.");
+                }
+            }
+        }
+
+        async function init() {
+            initElements();
+            setupEventListeners();
+            updateIntensityUI();
+            updateViewMode();
+            
+            // Check for Native Permissions
+            await requestPermissions();
+
+            // Hide Splash
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.style.opacity = '0';
+                    setTimeout(() => splash.remove(), 600);
+                }
+            }, 2500);
+
+            showToast('Offline Mode Enabled', 'LUT Studio is running at 100% Native Mobile Speed', 'info');
+            
+            // Reveal history by default
+            const section = document.getElementById('history-section');
+            if (section) section.classList.remove('hidden');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

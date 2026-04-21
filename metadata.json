@@ -1,0 +1,6 @@
+{
+  "name": "LUT Studio",
+  "description": "Professional batch 3D LUT applicator for images with real-time preview and intensive style controls.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": []
+}

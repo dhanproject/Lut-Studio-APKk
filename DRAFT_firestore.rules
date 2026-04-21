@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- 3. Primitive Definitions ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isValidId(id) { 
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- 2. Validation Blueprints ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() <= 256;
+    }
+
+    // Note: Jobs are strictly server-side managed, but we define the schema for consistency
+    function isValidJob(data) {
+      return data.keys().hasAll(['id', 'userId', 'status']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.status in ['pending', 'processing', 'completed', 'failed'];
+    }
+
+    // --- 4. Tiered Identity Logic & Collections ---
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isVerified() && isValidId(userId) && userId == request.auth.uid;
+      // Allow user to create/update their own profile
+      allow create: if isVerified() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming());
+      allow update: if isVerified() && isValidId(userId) && userId == request.auth.uid && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'email', 'updatedAt']);
+    }
+
+    // Jobs Collection
+    match /jobs/{jobId} {
+      // Users can only read their own jobs
+      // 8. Secure List Queries (The "Query Enforcer")
+      // We enforce the relational check against resource.data to prevent leaks.
+      allow get: if isVerified() && isValidId(jobId) && existing().userId == request.auth.uid;
+      allow list: if isVerified() && resource.data.userId == request.auth.uid;
+
+      // 1. The "Master Gate" (Write protection)
+      // Jobs are written ONLY by the Admin SDK (server-side). 
+      // Client-side writes are strictly forbidden to ensure data integrity.
+      allow write: if false;
+    }
+  }
+}
