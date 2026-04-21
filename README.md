@@ -40,4 +40,3 @@ Aplikasi ini berjalan di lingkungan Node.js (sebagai ganti Flask untuk kompatibi
 
 ---
 Dikembangkan dengan ❤️ untuk fotografer dan editor.
-Trigger Build V4.1 Offline

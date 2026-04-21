@@ -1,4 +1,4 @@
-name: Build APK Android Otomatis Terbaru
+name: Build APK Android Native
 
 on:
   push:
@@ -12,32 +12,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install & Build Web
-        run: |
-          npm install --legacy-peer-deps
-          # Coba build, kalau gagal pakai mode static simple
-          npm run build || (mkdir -p dist && cp index.html dist/index.html)
-          npx cap sync android
-
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Rakit APK Debug 🚀
+      - name: Rakit APK Langsung dari Folder Native 🚀
         run: |
-          cd android
+          # Cari folder android secara otomatis
+          ANDROID_PATH=$(find . -name "gradlew" -type f -exec dirname {} \; | head -n 1)
+          
+          if [ -z "$ANDROID_PATH" ]; then
+            echo "ERROR: Folder Android (gradlew) tidak ditemukan di dalam ZIP Mas!"
+            exit 1
+          fi
+          
+          echo "Folder Android ditemukan di: $ANDROID_PATH"
+          cd "$ANDROID_PATH"
           chmod +x gradlew
+          
+          # Langsung hajar rakit tanpa peduli urusan NPM/Web
           ./gradlew assembleDebug
 
-      - name: Upload Hasil APK
+      - name: Upload APK Jadi
         uses: actions/upload-artifact@v4
         with:
-          name: LUT_Studio_OFFLINE_FINAL
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: LUT_Studio_NATIVE_APK
+          path: "**/app-debug.apk"
