@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Firebase config asli (jangan di-commit)
+firebase-applet-config.json
+*.jks
+*.keystore
+*.pem
+local.properties

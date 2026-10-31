@@ -9,8 +9,19 @@ import cors from 'cors';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
-// Load config
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf-8'));
+// Load config: prefer env vars (FIREBASE_PROJECT_ID), fall back to a local
+// firebase-applet-config.json (gitignored, see firebase-applet-config.example.json).
+const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+const fileConfig = fs.existsSync(configPath)
+  ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  : {};
+const firebaseConfig = {
+  ...fileConfig,
+  projectId: process.env.FIREBASE_PROJECT_ID || fileConfig.projectId,
+};
+if (!firebaseConfig.projectId) {
+  throw new Error('FIREBASE_PROJECT_ID belum diset (env var atau firebase-applet-config.json).');
+}
 
 // Initialize Firebase Admin (Required for Auth token verification)
 let firebaseApp;
